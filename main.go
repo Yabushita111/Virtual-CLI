@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -23,7 +24,7 @@ type GameEvent struct {
 
 // open gamelog.json
 var gameID = "0c31fd1e-241e-46d6-8d01-bf3c3e97c391"
-var battlelogPath = "/Users/yabu/Battlesnake-rules/cli/battlesnake/battlelog/"
+var battlelogPath = "/home/shin/battlelog/"
 var filename = battlelogPath + gameID + ".json"
 
 //var scanner = bufio.NewScanner(file)
@@ -64,7 +65,11 @@ func main() {
 	mux.HandleFunc("/games/"+gameID, boardServer.handleGame)
 	mux.HandleFunc("/games/"+gameID+"/events", boardServer.handleWebsocket)
 
-	http.ListenAndServe(":8080", mux)
+	//http.ListenAndServe(":8080", mux)
+	listener, _ := net.Listen("tcp", "127.0.0.1:8080")
+	boardServer.httpServer.Serve(listener)
+
+
 	// go func() {
 	// 	err = boardServer.httpServer.Serve(listener)
 	// 	if err != http.ErrServerClosed {
@@ -89,7 +94,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // for http request
-func (server *BoardServer) handleGame(w http.ResponseWriter, r *http.Request) {
+func (server *BoardServer) handleGame(w http.ResponseWriter, r *http.Request) {	
 	fmt.Println("send http message")
 	w.Header().Add("Content-Type", "application/json")
 	var file, _ = os.Open(filename)
