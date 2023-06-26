@@ -23,7 +23,7 @@ type GameEvent struct {
 }
 
 // open gamelog.json
-var gameID = "0c31fd1e-241e-46d6-8d01-bf3c3e97c391"
+var gameID = "6e331004-76a9-4c43-9294-a291f7673ccc"
 var battlelogPath = "/home/shin/battlelog/"
 var filename = battlelogPath + gameID + ".json"
 
@@ -66,7 +66,7 @@ func main() {
 	mux.HandleFunc("/games/"+gameID+"/events", boardServer.handleWebsocket)
 
 	//http.ListenAndServe(":8080", mux)
-	listener, _ := net.Listen("tcp", "127.0.0.1:8080")
+	listener, _ := net.Listen("tcp", ":8080")
 	boardServer.httpServer.Serve(listener)
 
 
