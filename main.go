@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -12,18 +11,18 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
 
-	"github.com/pkg/browser"
 	log "github.com/spf13/jwalterweatherman"
 )
 
-var events chan GameEvent
+type GameEventType string
 
 type GameEvent struct {
-	MyEvent string `json:"myData"`
+	EventType GameEventType `json:"Type"`
+	Data      interface{}   `json:"Data"`
 }
 
 // open gamelog.json
-var gameID = "8d25c551-d275-4fb5-948e-2baa48f32a7a"
+var gameID = "0c31fd1e-241e-46d6-8d01-bf3c3e97c391"
 var battlelogPath = "/Users/yabu/Battlesnake-rules/cli/battlesnake/battlelog/"
 var filename = battlelogPath + gameID + ".json"
 
@@ -64,21 +63,23 @@ func main() {
 	fmt.Println("config handle url")
 	mux.HandleFunc("/games/"+gameID, boardServer.handleGame)
 	mux.HandleFunc("/games/"+gameID+"/events", boardServer.handleWebsocket)
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	go func() {
-		err = boardServer.httpServer.Serve(listener)
-		if err != http.ErrServerClosed {
-			log.ERROR.Printf("Error in board HTTP server: %v", err)
-		}
-	}()
+
+	http.ListenAndServe(":8080", mux)
+	// go func() {
+	// 	err = boardServer.httpServer.Serve(listener)
+	// 	if err != http.ErrServerClosed {
+	// 		log.ERROR.Printf("Error in board HTTP server: %v", err)
+	// 	}
+	// }()
 	// open browser
-	board := "http://127.0.0.1:3000"
-	serverURL := "http://" + listener.Addr().String()
-	boardURL := fmt.Sprintf(board+"?engine=%s&game=%s&autoplay=true", serverURL, gameID)
-	log.INFO.Printf("Opening board URL: %s", boardURL)
-	if err := browser.OpenURL(boardURL); err != nil {
-		log.ERROR.Printf("Failed to open browser: %v", err)
-	}
+
+	// board := "http://127.0.0.1:3000"
+	// serverURL := "http://" + listener.Addr().String()
+	// boardURL := fmt.Sprintf(board+"?engine=%s&game=%s&autoplay=true", serverURL, gameID)
+	// log.INFO.Printf("Opening board URL: %s", boardURL)
+	// if err := browser.OpenURL(boardURL); err != nil {
+	// 	log.ERROR.Printf("Failed to open browser: %v", err)
+	// }
 }
 
 var upgrader = websocket.Upgrader{
@@ -107,6 +108,7 @@ func (server *BoardServer) handleGame(w http.ResponseWriter, r *http.Request) {
 
 // for websocket
 func (server *BoardServer) handleWebsocket(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("send ws message")
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.ERROR.Printf("Unable to upgrade connection: %v", err)
@@ -119,23 +121,38 @@ func (server *BoardServer) handleWebsocket(w http.ResponseWriter, r *http.Reques
 			log.ERROR.Printf("Unable to close websocket stream")
 		}
 	}()
+	fmt.Println("start read file")
 	var file, _ = os.Open(filename)
 	var scanner = bufio.NewScanner(file)
 	scanner.Scan()
-	json.NewDecoder(strings.NewReader(scanner.Text())).Decode(&server.events)
-	for event := range server.events {
-		jsonStr, err := json.Marshal(event)
-		if err != nil {
-			log.ERROR.Printf("Unable to serialize event for websocket: %v", err)
-		}
-
-		err = ws.WriteMessage(websocket.TextMessage, jsonStr)
-		if err != nil {
-			log.ERROR.Printf("Unable to write to websocket: %v", err)
-			break
-		}
+	fmt.Println("finish read")
+	fmt.Println("finish decode")
+	fmt.Println(server.events)
+	var events []GameEvent
+	for scanner.Scan() {
+		var event GameEvent
+		json.NewDecoder(strings.NewReader(scanner.Text())).Decode(&event)
+		events = append(events, event)
+	}
+	for _, event := range events {
+		jsonStr, _ := json.Marshal(event)
+		ws.WriteMessage(websocket.TextMessage, jsonStr)
 	}
 
+	// for event := range servger.events {
+	// 	fmt.Println(event)
+	// 	jsonStr, err := json.Marshal(event)
+	// 	if err != nil {
+	// 		log.ERROR.Printf("Unable to serialize event for websocket: %v", err)
+	// 	}
+
+	// 	err = ws.WriteMessage(websocket.TextMessage, jsonStr)
+	// 	if err != nil {
+	// 		log.ERROR.Printf("Unable to write to websocket: %v", err)
+	// 		break
+	// 	}
+	// }
+	fmt.Println("Finished writing all game events, signalling game server to stop")
 	log.DEBUG.Printf("Finished writing all game events, signalling game server to stop")
 	close(server.done)
 
