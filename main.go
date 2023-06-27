@@ -53,10 +53,10 @@ type BoardServer struct {
 
 func main() {
 	// print browser url
-	board := "http://127.0.0.1:3000/"
-	vcli := "http://127.0.0.1:8080"
-	boardURL := board + "?engine=" + vcli + "&game=" + gameID
-	fmt.Println(boardURL)
+	boardURL := "http://127.0.0.1:3000/"
+	vcliURL := "http://127.0.0.1:8080"
+	browserURL := boardURL + "?engine=" + vcliURL + "&game=" + gameID
+	fmt.Println(browserURL)
 	// config handler and run server
 	mux := http.NewServeMux()
 	boardServer := BoardServer{
