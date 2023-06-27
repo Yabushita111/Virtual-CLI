@@ -124,9 +124,7 @@ func (server *BoardServer) handleWebsocket(w http.ResponseWriter, r *http.Reques
 		ws.WriteMessage(websocket.TextMessage, jsonStr)
 	}
 	log.DEBUG.Printf("Finished writing all game events, signalling game server to stop")
-	close(server.done)
 
-	log.DEBUG.Printf("Sending websocket close message")
 	err = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
 		log.ERROR.Printf("Problem closing websocket: %v", err)
